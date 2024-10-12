@@ -1,0 +1,42 @@
+<html>
+    <head>
+        <title>micro:bit UART</title>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/microbit-web-bluetooth@latest/dist/microbit.umd.js"></script>
+    </head>
+    <body>
+        <button id="connect">Connect to micro:bit</button>
+        <div id="log" style="white-space: pre;"></div>
+
+        <script>
+            const logEl = document.getElementById("log");
+            const log = (message) => logEl.innerHTML = `${message}\n${logEl.innerHTML}`;
+
+            document.getElementById("connect").onclick = async () => {
+                try {
+                    // Request the micro:bit device
+                    const device = await microbit.requestMicrobit(window.navigator.bluetooth);
+                    if (device) {
+                        const services = await microbit.getServices(device);
+                        
+                        if (services.uartService) {
+                            log("UART service connected");
+                            // Listen for incoming UART data
+                            services.uartService.addEventListener("receiveText", (event) => {
+                                log(`Received: ${event.detail}`);
+                            });
+
+                            // Optional: Send a message via UART
+                            const message = new TextEncoder().encode("Hello micro:bit!");
+                            await services.uartService.send(message);
+                            log("Sent: Hello micro:bit!");
+                        } else {
+                            log("UART service not available");
+                        }
+                    }
+                } catch (error) {
+                    log(`Error: ${error.message}`);
+                }
+            };
+        </script>
+    </body>
+</html>
