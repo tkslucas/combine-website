@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "microbit-web-bluetooth": "^0.7.0"
+  }
+}
