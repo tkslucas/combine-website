@@ -1,41 +1,116 @@
 <html>
     <head>
-        <title>micro:bit UART</title>
+        <title>Race Timer</title>
         <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/microbit-web-bluetooth@latest/dist/microbit.umd.js"></script>
     </head>
     <body>
+        <h1>Race Timer</h1>
         <button id="connect">Connect to micro:bit</button>
-        <div id="log" style="white-space: pre;"></div>
+
+        <table border="1" id="raceTable">
+            <thead>
+                <tr>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Final Time (s)</th>
+                </tr>
+            </thead>
+            <tbody id="raceData"></tbody>
+        </table>
+
+        <button id="download">Download CSV</button>
+
+        <h2>UART Log</h2>
+        <div id="uartLog" style="white-space: pre-wrap; border: 1px solid black; padding: 10px; max-height: 200px; overflow-y: auto;"></div>
 
         <script>
-            const logEl = document.getElementById("log");
-            const log = (message) => logEl.innerHTML = `${message}\n${logEl.innerHTML}`;
+            let startTime = null; // To store the start time of the race
+            let races = []; // To store all race data
 
+            const uartLogEl = document.getElementById("uartLog");
+
+            // Function to log messages to the UART log section
+            const logUart = (message) => {
+                uartLogEl.innerHTML = `${message}\n${uartLogEl.innerHTML}`;
+            };
+
+            // Function to update the race table
+            function updateRaceTable(start, end, finalTime) {
+                const raceTable = document.getElementById("raceData");
+                const row = document.createElement("tr");
+
+                const startCell = document.createElement("td");
+                const endCell = document.createElement("td");
+                const finalTimeCell = document.createElement("td");
+
+                // Fill in table cells with times
+                startCell.textContent = start.toLocaleTimeString();
+                endCell.textContent = end.toLocaleTimeString();
+                finalTimeCell.textContent = finalTime.toFixed(2);
+
+                row.appendChild(startCell);
+                row.appendChild(endCell);
+                row.appendChild(finalTimeCell);
+
+                raceTable.appendChild(row);
+            }
+
+            // Connect to the micro:bit
             document.getElementById("connect").onclick = async () => {
                 try {
-                    // Request the micro:bit device
                     const device = await microbit.requestMicrobit(window.navigator.bluetooth);
                     if (device) {
                         const services = await microbit.getServices(device);
-                        
-                        if (services.uartService) {
-                            log("UART service connected");
-                            // Listen for incoming UART data
-                            services.uartService.addEventListener("receiveText", (event) => {
-                                log(`Received: ${event.detail}`);
-                            });
 
-                            // Optional: Send a message via UART
-                            const message = new TextEncoder().encode("Hello micro:bit!");
-                            await services.uartService.send(message);
-                            log("Sent: Hello micro:bit!");
+                        if (services.uartService) {
+                            logUart("UART service connected");
+
+                            // Listen for UART messages
+                            services.uartService.addEventListener("receiveText", (event) => {
+                                const data = event.detail.trim();
+                                logUart(`Received: ${data}`);
+
+                                // Handle "dashstart" and "dashstop" for race timing
+                                if (data === "dashstart") {
+                                    // Record the start time
+                                    startTime = new Date();
+                                    logUart(`Start time recorded: ${startTime.toLocaleTimeString()}`);
+                                } else if (data === "dashstop" && startTime) {
+                                    // Record the end time and calculate final time
+                                    const endTime = new Date();
+                                    const finalTime = (endTime - startTime) / 1000; // in seconds
+                                    logUart(`End time recorded: ${endTime.toLocaleTimeString()}, Final time: ${finalTime}s`);
+
+                                    // Add to races array and update table
+                                    races.push({ startTime, endTime, finalTime });
+                                    updateRaceTable(startTime, endTime, finalTime);
+
+                                    // Reset startTime for the next race
+                                    startTime = null;
+                                }
+                            });
                         } else {
-                            log("UART service not available");
+                            logUart("UART service not available");
                         }
                     }
                 } catch (error) {
-                    log(`Error: ${error.message}`);
+                    logUart(`Error: ${error.message}`);
                 }
+            };
+
+            // Download CSV file with race data
+            document.getElementById("download").onclick = () => {
+                const csvContent = "Start Time,End Time,Final Time (s)\n" +
+                    races.map(race => 
+                        `${race.startTime.toLocaleTimeString()},${race.endTime.toLocaleTimeString()},${race.finalTime.toFixed(2)}`
+                    ).join("\n");
+
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.setAttribute('href', url);
+                a.setAttribute('download', 'race_times.csv');
+                a.click();
             };
         </script>
     </body>
