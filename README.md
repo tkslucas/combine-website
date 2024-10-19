@@ -30,7 +30,7 @@ Copy and paste these configurations:
         "config": {
             "microbit-dal": {
                 "bluetooth": {
-                    "open": 0,
+                    "open": 1,
                     "whitelist": 0,
                     "security_level": null
                 }
