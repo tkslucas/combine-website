@@ -1,117 +1,192 @@
-<html>
-    <head>
-        <title>Race Timer</title>
-        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/microbit-web-bluetooth@latest/dist/microbit.umd.js"></script>
-    </head>
-    <body>
-        <h1>Race Timer</h1>
-        <button id="connect">Connect to micro:bit</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Race Timer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans p-0 m-0">
+    <div class="max-w-4xl mx-auto px-4 py-4">
+        <!-- Title -->
+        <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">Race Timer</h1>
 
-        <table border="1" id="raceTable">
-            <thead>
-                <tr>
-                    <th>Start Time</th>
-                    <th>End Time</th>
-                    <th>Final Time (s)</th>
-                </tr>
-            </thead>
-            <tbody id="raceData"></tbody>
-        </table>
+        <!-- Button to connect micro:bit -->
+        <div class="flex justify-center mb-6">
+            <button id="connect" class="bg-blue-500 text-white px-6 py-2 rounded-lg shadow hover:bg-blue-600 transition duration-200">
+                Connect to micro:bit
+            </button>
+        </div>
 
-        <button id="download">Download CSV</button>
+        <!-- Race Table -->
+        <div class="overflow-x-auto mb-6">
+            <table class="min-w-full table-auto bg-white rounded-lg overflow-hidden">
+                <thead class="bg-blue-500 text-white">
+                    <tr>
+                        <th class="py-3 px-6 text-left">Device Name</th>
+                        <th class="py-3 px-6 text-left">Start Time</th>
+                        <th class="py-3 px-6 text-left">End Time</th>
+                        <th class="py-3 px-6 font-black text-left">Final Time (s)</th>
+                    </tr>
+                </thead>
+                <tbody id="raceData" class="divide-y divide-gray-200">
+                    <!-- Rows will be appended here -->
+                </tbody>
+            </table>
+        </div>
 
-        <h2>UART Log</h2>
-        <div id="uartLog" style="white-space: pre-wrap; border: 1px solid black; padding: 10px; max-height: 200px; overflow-y: auto;"></div>
+        <!-- Download CSV Button -->
+        <div class="flex justify-center mb-6">
+            <button id="download" class="bg-green-500 text-white px-6 py-2 rounded-lg shadow hover:bg-green-600 transition duration-200">
+                Download CSV
+            </button>
+        </div>
 
-        <script>
-            let startTime = null; // To store the start time of the race
-            let races = []; // To store all race data
+        <!-- List of connected micro:bit devices -->
+        <div class="flex justify-center mb-6">
+            <div>
+                <h3 class="text-lg font-semibold mb-2">Connected micro:bit Devices:</h3>
+                <ul id="deviceList" class="list-disc pl-5">
+                    <!-- Device names will be appended here -->
+                </ul>
+            </div>
+        </div>
 
-            const uartLogEl = document.getElementById("uartLog");
+        <!-- UART Log -->
+        <h2 class="text-xl font-semibold text-gray-700 mb-3">UART Log</h2>
+        <div id="uartLog" class="bg-white shadow-md rounded-lg p-4 max-h-48 overflow-y-auto border border-gray-200" style="white-space: pre-wrap;">
+            <!-- UART messages will appear here -->
+        </div>
+    </div>
 
-            // Function to log messages to the UART log section
-            const logUart = (message) => {
-                uartLogEl.innerHTML = `${message}\n${uartLogEl.innerHTML}`;
-            };
+    <script src="https://cdn.jsdelivr.net/npm/microbit-web-bluetooth@latest/dist/microbit.umd.js"></script>
+    <script>
+        let races = {}; // To store all race data per device
+        const uartLogEl = document.getElementById("uartLog");
+        const deviceListEl = document.getElementById("deviceList");
 
-            // Function to update the race table
-            function updateRaceTable(start, end, finalTime) {
-                const raceTable = document.getElementById("raceData");
-                const row = document.createElement("tr");
+        // Function to log messages to the UART log section
+        const logUart = (message) => {
+            uartLogEl.innerHTML = `${message}\n${uartLogEl.innerHTML}`;
+        };
 
-                const startCell = document.createElement("td");
-                const endCell = document.createElement("td");
-                const finalTimeCell = document.createElement("td");
+        // Function to update the race table with device name
+        function updateRaceTable(deviceName, start, end, finalTime) {
+            const raceTable = document.getElementById("raceData");
+            const row = document.createElement("tr");
 
-                // Fill in table cells with times
-                startCell.textContent = start.toLocaleTimeString();
-                endCell.textContent = end.toLocaleTimeString();
-                finalTimeCell.textContent = finalTime.toFixed(2);
+            const deviceCell = document.createElement("td");
+            const startCell = document.createElement("td");
+            const endCell = document.createElement("td");
+            const finalTimeCell = document.createElement("td");
 
-                row.appendChild(startCell);
-                row.appendChild(endCell);
-                row.appendChild(finalTimeCell);
+            // Fill in table cells with times and device name
+            deviceCell.textContent = deviceName;
+            startCell.textContent = start.toLocaleTimeString();
+            endCell.textContent = end.toLocaleTimeString();
+            finalTimeCell.textContent = finalTime.toFixed(2);
 
-                raceTable.appendChild(row);
+            // Add Tailwind classes for table cells
+            deviceCell.classList.add('py-3', 'px-6');
+            startCell.classList.add('py-3', 'px-6');
+            endCell.classList.add('py-3', 'px-6');
+            finalTimeCell.classList.add('py-3', 'px-6', 'font-black');
+
+            row.appendChild(deviceCell);
+            row.appendChild(startCell);
+            row.appendChild(endCell);
+            row.appendChild(finalTimeCell);
+
+            raceTable.appendChild(row);
+        }
+
+        // Function to update the list of connected micro:bit devices
+        function updateDeviceList(deviceName) {
+            const listItem = document.createElement("li");
+            listItem.textContent = deviceName;
+            deviceListEl.appendChild(listItem);
+        }
+
+        // Function to handle race start and stop for a specific device
+        function handleRaceData(deviceName, data) {
+            if (!races[deviceName]) {
+                races[deviceName] = { startTime: null, raceData: [] };
             }
 
-            // Connect to the micro:bit
-            document.getElementById("connect").onclick = async () => {
-                try {
-                    const device = await microbit.requestMicrobit(window.navigator.bluetooth);
-                    if (device) {
-                        const services = await microbit.getServices(device);
+            const deviceRace = races[deviceName];
 
-                        if (services.uartService) {
-                            logUart("UART service connected");
+            if (data === "dashstart") {
+                // Record the start time
+                deviceRace.startTime = new Date();
+                logUart(`[${deviceName}] Start time recorded: ${deviceRace.startTime.toLocaleTimeString()}`);
+            } else if (data === "dashstop" && deviceRace.startTime) {
+                // Record the end time and calculate final time
+                const endTime = new Date();
+                const finalTime = (endTime - deviceRace.startTime) / 1000; // in seconds
+                logUart(`[${deviceName}] End time recorded: ${endTime.toLocaleTimeString()}, Final time: ${finalTime}s`);
 
-                            // Listen for UART messages
-                            services.uartService.addEventListener("receiveText", (event) => {
-                                const data = event.detail.trim();
-                                logUart(`Received: ${data}`);
+                // Add to race data array and update table
+                deviceRace.raceData.push({ startTime: deviceRace.startTime, endTime, finalTime });
+                updateRaceTable(deviceName, deviceRace.startTime, endTime, finalTime);
 
-                                // Handle "dashstart" and "dashstop" for race timing
-                                if (data === "dashstart") {
-                                    // Record the start time
-                                    startTime = new Date();
-                                    logUart(`Start time recorded: ${startTime.toLocaleTimeString()}`);
-                                } else if (data === "dashstop" && startTime) {
-                                    // Record the end time and calculate final time
-                                    const endTime = new Date();
-                                    const finalTime = (endTime - startTime) / 1000; // in seconds
-                                    logUart(`End time recorded: ${endTime.toLocaleTimeString()}, Final time: ${finalTime}s`);
+                // Reset startTime for the next race
+                deviceRace.startTime = null;
+            }
+        }
 
-                                    // Add to races array and update table
-                                    races.push({ startTime, endTime, finalTime });
-                                    updateRaceTable(startTime, endTime, finalTime);
+        // Connect to the micro:bit
+        document.getElementById("connect").onclick = async () => {
+            try {
+                const device = await microbit.requestMicrobit(window.navigator.bluetooth);
+                if (device) {
+                    const filteredName = device.name.match(/\[(.*?)\]/)?.[1] || device.name;
+                    logUart(`Connected to: ${filteredName}`);
+                    updateDeviceList(filteredName); // Add the device name to the list
 
-                                    // Reset startTime for the next race
-                                    startTime = null;
-                                }
-                            });
-                        } else {
-                            logUart("UART service not available");
-                        }
+                    const services = await microbit.getServices(device);
+
+                    if (services.uartService) {
+                        logUart(`[${filteredName}] UART service connected`);
+
+                        // Listen for UART messages
+                        services.uartService.addEventListener("receiveText", (event) => {
+                            const data = event.detail.trim();
+                            logUart(`[${filteredName}] Received: ${data}`);
+
+                            // Handle "dashstart" and "dashstop" for race timing for this device
+                            handleRaceData(filteredName, data);
+                        });
+
+                        await services.uartService.sendText("connected\n");
+                    } else {
+                        logUart(`[${filteredName}] UART service not available`);
                     }
-                } catch (error) {
-                    logUart(`Error: ${error.message}`);
                 }
-            };
+            } catch (error) {
+                logUart(`Error: ${error.message}`);
+            }
+        };
 
-            // Download CSV file with race data
-            document.getElementById("download").onclick = () => {
-                const csvContent = "Start Time,End Time,Final Time (s)\n" +
-                    races.map(race => 
-                        `${race.startTime.toLocaleTimeString()},${race.endTime.toLocaleTimeString()},${race.finalTime.toFixed(2)}`
-                    ).join("\n");
+        // Download CSV file with race data, including device name
+        document.getElementById("download").onclick = () => {
+            let csvContent = "Device Name,Start Time,End Time,Final Time (s)\n";
 
-                const blob = new Blob([csvContent], { type: 'text/csv' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.setAttribute('href', url);
-                a.setAttribute('download', 'race_times.csv');
-                a.click();
-            };
-        </script>
-    </body>
+            // Loop over each device's race data
+            for (const deviceName in races) {
+                const deviceRace = races[deviceName];
+                csvContent += deviceRace.raceData.map(race =>
+                    `${deviceName},${race.startTime.toLocaleTimeString()},${race.endTime.toLocaleTimeString()},${race.finalTime.toFixed(2)}`
+                ).join("\n") + "\n";
+            }
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', 'race_times.csv');
+            a.click();
+        };
+    </script>
+</body>
 </html>
