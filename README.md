@@ -67,6 +67,10 @@ Search and Filter Functionality
 
 Add button to upload to external database
 
+Add button to hide logs and other internal things (like time start and time stop)
+
+Save data in localStorage (maybe? this just prevents data losses if the user forgets to download CSV when refreshing the page)
+
 Make the physical setup easier:
     Drill holes for ultrasonic sensor
     Mount the microbit inside the cones
