@@ -77,6 +77,28 @@
             uartLogEl.innerHTML = `${message}\n${uartLogEl.innerHTML}`;
         };
 
+        // Notifications for some actions        
+        const notify = (message) => {
+            const notification = document.createElement('div');
+            notification.className = "fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg opacity-0 transform translate-y-4 transition-all duration-300 ease-in-out"; // Tailwind classes
+            notification.textContent = message;
+            document.body.appendChild(notification);
+        
+            // Allow the element to be rendered before adding 'opacity-100' and 'translate-y-0'
+            setTimeout(() => {
+                notification.classList.remove('opacity-0', 'translate-y-4'); // Fade in and slide up
+                notification.classList.add('opacity-100', 'translate-y-0');
+            }, 10); // Small delay to ensure the notification is in the DOM
+        
+            // Remove the notification after a set duration
+            setTimeout(() => {
+                notification.classList.remove('opacity-100', 'translate-y-0'); // Fade out
+                notification.classList.add('opacity-0', 'translate-y-4'); // Slide down
+                // Remove the notification from the DOM after fade out
+                setTimeout(() => notification.remove(), 300); // Wait for fade out before removing
+            }, 3000); // Display for 3 seconds
+        };
+
         // Function to update the race table with device name
         function updateRaceTable(data_id, deviceName, start, end, finalTime) {
             const row = document.createElement("tr");
@@ -113,6 +135,7 @@
                 if (index > -1) {
                     races[deviceName].raceData.splice(index, 1); // Remove from races data structure
                     logUart(`Removed race for device: ${deviceName}, Start: ${start.toLocaleTimeString()}, End: ${end.toLocaleTimeString()}, Final Time: ${finalTime.toFixed(2)}s`); // Log the removal
+                    notify(`Removed race for device: ${deviceName}, Start: ${start.toLocaleTimeString()}, End: ${end.toLocaleTimeString()}, Final Time: ${finalTime.toFixed(2)}s`); // Log the removal
                 }
                 row.remove(); // Remove the row from the table
             };
@@ -171,6 +194,7 @@
                 races = {}; // Clear race data
                 raceDataEl.innerHTML = ''; // Clear race table
                 logUart("All race data cleared.");
+                notify("All race data cleared.");
             } else {
                 logUart("Data not cleared.")
             }
@@ -183,6 +207,7 @@
                 if (device) {
                     const filteredName = device.name.match(/\[(.*?)\]/)?.[1] || device.name;
                     logUart(`Connected to: ${filteredName}`);
+                    notify(`Connected to: ${filteredName}`);
                     updateDeviceList(filteredName); // Add the device name to the list
 
                     const services = await microbit.getServices(device);
@@ -227,6 +252,8 @@
             a.setAttribute('href', url);
             a.setAttribute('download', 'race_times.csv');
             a.click();
+
+            notify("CSV Data Downloaded!")
         };
     </script>
 </body>
