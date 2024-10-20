@@ -59,6 +59,14 @@ Micro:bit BLE Uart messages:
 ## TODO
 Add box in the table to type in name, saves name to csv
 
+Create pages for different activities (rn we just have dash)
+
+Race data validation and toggle logging
+
+Search and Filter Functionality
+
+Add button to upload to external database
+
 Make the physical setup easier:
     Drill holes for ultrasonic sensor
     Mount the microbit inside the cones
