@@ -158,7 +158,7 @@
                             handleRaceData(filteredName, data);
                         });
 
-                        await services.uartService.sendText("connected\n");
+                        //await services.uartService.sendText("connected\n"); // Send uart message to microbit
                     } else {
                         logUart(`[${filteredName}] UART service not available`);
                     }
