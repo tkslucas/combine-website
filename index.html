@@ -3,19 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Race Timer</title>
+    <title>40yd Dash</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 font-sans p-0 m-0">
     <div class="max-w-4xl mx-auto px-4 py-4">
         <!-- Title -->
-        <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">Race Timer</h1>
+        <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">Dash Activity</h1>
 
         <!-- Button to connect micro:bit -->
         <div class="flex justify-center mb-6">
             <button id="connect" class="bg-blue-500 text-white px-6 py-2 rounded-lg shadow hover:bg-blue-600 transition duration-200">
                 Connect to micro:bit
+            </button>
+            <button id="clearData" class="bg-red-500 text-white px-6 py-2 rounded-lg shadow hover:bg-red-600 transition duration-200 ml-4">
+                Clear Data
             </button>
         </div>
 
@@ -28,6 +31,7 @@
                         <th class="py-3 px-6 text-left">Start Time</th>
                         <th class="py-3 px-6 text-left">End Time</th>
                         <th class="py-3 px-6 font-black text-left">Final Time (s)</th>
+                        <th class="py-3 px-6 text-left">Action</th>
                     </tr>
                 </thead>
                 <tbody id="raceData" class="divide-y divide-gray-200">
@@ -62,9 +66,11 @@
 
     <script src="https://cdn.jsdelivr.net/npm/microbit-web-bluetooth@latest/dist/microbit.umd.js"></script>
     <script>
-        let races = {}; // To store all race data per device
+        let races = []; // To store all race data per device
+        let id = 0; // To store id of each data entry (makes it easier to delete rows)
         const uartLogEl = document.getElementById("uartLog");
         const deviceListEl = document.getElementById("deviceList");
+        const raceDataEl = document.getElementById("raceData");
 
         // Function to log messages to the UART log section
         const logUart = (message) => {
@@ -72,14 +78,14 @@
         };
 
         // Function to update the race table with device name
-        function updateRaceTable(deviceName, start, end, finalTime) {
-            const raceTable = document.getElementById("raceData");
+        function updateRaceTable(data_id, deviceName, start, end, finalTime) {
             const row = document.createElement("tr");
 
             const deviceCell = document.createElement("td");
             const startCell = document.createElement("td");
             const endCell = document.createElement("td");
             const finalTimeCell = document.createElement("td");
+            const actionCell = document.createElement("td"); // New action cell
 
             // Fill in table cells with times and device name
             deviceCell.textContent = deviceName;
@@ -92,13 +98,33 @@
             startCell.classList.add('py-3', 'px-6');
             endCell.classList.add('py-3', 'px-6');
             finalTimeCell.classList.add('py-3', 'px-6', 'font-black');
+            actionCell.classList.add('py-3', 'px-6');
+
+            // Create a button to remove the row
+            const removeButton = document.createElement("button");
+            removeButton.textContent = "Remove";
+            removeButton.className = "bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600";
+            removeButton.onclick = () => {
+                // Find the index of the race to remove
+                const index = races[deviceName].raceData.findIndex(raceDataElement =>
+                    raceDataElement.data_id == data_id
+                );
+                if (index > -1) {
+                    races[deviceName].raceData.splice(index, 1); // Remove from races data structure
+                    logUart(`Removed race for device: ${deviceName}, Start: ${start.toLocaleTimeString()}, End: ${end.toLocaleTimeString()}, Final Time: ${finalTime.toFixed(2)}s`); // Log the removal
+                }
+                row.remove(); // Remove the row from the table
+            };
 
             row.appendChild(deviceCell);
             row.appendChild(startCell);
             row.appendChild(endCell);
             row.appendChild(finalTimeCell);
 
-            raceTable.appendChild(row);
+            actionCell.appendChild(removeButton); // Append the remove button to action cell
+            row.appendChild(actionCell); // Append action cell to the row
+
+            raceDataEl.appendChild(row);
         }
 
         // Function to update the list of connected micro:bit devices
@@ -127,8 +153,10 @@
                 logUart(`[${deviceName}] End time recorded: ${endTime.toLocaleTimeString()}, Final time: ${finalTime}s`);
 
                 // Add to race data array and update table
-                deviceRace.raceData.push({ startTime: deviceRace.startTime, endTime, finalTime });
-                updateRaceTable(deviceName, deviceRace.startTime, endTime, finalTime);
+                deviceRace.raceData.push({ data_id: id, startTime: deviceRace.startTime, endTime, finalTime });
+                updateRaceTable(id, deviceName, deviceRace.startTime, endTime, finalTime);
+                // Increment id
+                id++;
 
                 // Reset startTime for the next race
                 deviceRace.startTime = null;
@@ -186,6 +214,17 @@
             a.setAttribute('href', url);
             a.setAttribute('download', 'race_times.csv');
             a.click();
+        };
+
+        // Clear Data button functionality
+        document.getElementById("clearData").onclick = () => {
+            const confirmation = confirm("Are you sure you want to clear all race data? This action cannot be undone.");
+            if (confirmation) {
+                races = {}; // Clear race data
+                deviceListEl.innerHTML = ''; // Clear connected devices list
+                raceDataEl.innerHTML = ''; // Clear race table
+                logUart("All race data cleared.");
+            }
         };
     </script>
 </body>
