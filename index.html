@@ -27,6 +27,7 @@
             <table class="min-w-full table-auto bg-white rounded-lg overflow-hidden">
                 <thead class="bg-blue-500 text-white">
                     <tr>
+                        <th class="py-3 px-6 text-left">Name</th>
                         <th class="py-3 px-6 text-left">Device Name</th>
                         <th class="py-3 px-6 text-left">Start Time</th>
                         <th class="py-3 px-6 text-left">End Time</th>
@@ -103,54 +104,74 @@
         function updateRaceTable(data_id, deviceName, start, end, finalTime) {
             const row = document.createElement("tr");
             row.classList.add('transition', 'duration-200', 'hover:bg-slate-100'); // Add hover effect
-
+        
+            const nameCell = document.createElement("td"); // New name cell
             const deviceCell = document.createElement("td");
             const startCell = document.createElement("td");
             const endCell = document.createElement("td");
             const finalTimeCell = document.createElement("td");
-            const actionCell = document.createElement("td"); // New action cell
-
+            const actionCell = document.createElement("td");
+        
+            // Create an input field for the name
+            const nameInput = document.createElement("input");
+            nameInput.type = "text";
+            nameInput.className = "border rounded px-2 py-1 w-full"; // Tailwind classes for styling
+            nameInput.placeholder = "Enter name"; // Placeholder text
+        
+            // Event listener to update the race data array as the user types
+            nameInput.addEventListener("input", (event) => {
+                const nameValue = event.target.value;
+                // Update the name in the races data structure
+                const raceEntry = races[deviceName].raceData.find(race => race.data_id === data_id);
+                if (raceEntry) {
+                    raceEntry.name = nameValue; // Save the name to the race entry
+                }
+            });
+        
             // Fill in table cells with times and device name
             deviceCell.textContent = deviceName;
             startCell.textContent = start.toLocaleTimeString();
             endCell.textContent = end.toLocaleTimeString();
             finalTimeCell.textContent = finalTime.toFixed(2);
-
+        
             // Add Tailwind classes for table cells
+            nameCell.classList.add('py-3', 'px-6');
             deviceCell.classList.add('py-3', 'px-6');
             startCell.classList.add('py-3', 'px-6');
             endCell.classList.add('py-3', 'px-6');
             finalTimeCell.classList.add('py-3', 'px-6', 'font-black');
             actionCell.classList.add('py-3', 'px-6');
-
+        
+            // Append the name input to the name cell
+            nameCell.appendChild(nameInput);
+            row.appendChild(nameCell);
+            row.appendChild(deviceCell);
+            row.appendChild(startCell);
+            row.appendChild(endCell);
+            row.appendChild(finalTimeCell);
+        
             // Create a button to remove the row
             const removeButton = document.createElement("button");
             removeButton.textContent = "Remove";
             removeButton.className = "bg-red-500 text-white px-3 py-1 shadow rounded-lg transition duration-200 hover:bg-red-600";
             removeButton.onclick = () => {
-                // Find the index of the race to remove
                 const index = races[deviceName].raceData.findIndex(raceDataElement =>
                     raceDataElement.data_id == data_id
                 );
                 if (index > -1) {
-                    races[deviceName].raceData.splice(index, 1); // Remove from races data structure
-                    logUart(`Removed race for device: ${deviceName}, Start: ${start.toLocaleTimeString()}, End: ${end.toLocaleTimeString()}, Final Time: ${finalTime.toFixed(2)}s`); // Log the removal
-                    notify(`Removed race for device: ${deviceName}, Start: ${start.toLocaleTimeString()}, End: ${end.toLocaleTimeString()}, Final Time: ${finalTime.toFixed(2)}s`); // Log the removal
+                    races[deviceName].raceData.splice(index, 1);
+                    logUart(`Removed race for device: ${deviceName}, Start: ${start.toLocaleTimeString()}, End: ${end.toLocaleTimeString()}, Final Time: ${finalTime.toFixed(2)}s`);
+                    notify(`Removed race for device: ${deviceName}, Start: ${start.toLocaleTimeString()}, End: ${end.toLocaleTimeString()}, Final Time: ${finalTime.toFixed(2)}s`);
                 }
                 row.remove(); // Remove the row from the table
             };
-
-            row.appendChild(deviceCell);
-            row.appendChild(startCell);
-            row.appendChild(endCell);
-            row.appendChild(finalTimeCell);
-
+        
             actionCell.appendChild(removeButton); // Append the remove button to action cell
             row.appendChild(actionCell); // Append action cell to the row
-
+        
             raceDataEl.appendChild(row);
         }
-
+        
         // Function to update the list of connected micro:bit devices
         function updateDeviceList(deviceName) {
             const listItem = document.createElement("li");
@@ -236,13 +257,13 @@
 
         // Download CSV file with race data, including device name
         document.getElementById("download").onclick = () => {
-            let csvContent = "Device Name,Start Time,End Time,Final Time (s)\n";
+            let csvContent = "Name,Device,Start Time,End Time,Final Time (s)\n";
 
             // Loop over each device's race data
             for (const deviceName in races) {
                 const deviceRace = races[deviceName];
                 csvContent += deviceRace.raceData.map(race =>
-                    `${deviceName},${race.startTime.toLocaleTimeString()},${race.endTime.toLocaleTimeString()},${race.finalTime.toFixed(2)}`
+                  `${race.name},${deviceName},${race.startTime.toLocaleTimeString()},${race.endTime.toLocaleTimeString()},${race.finalTime.toFixed(2)}`
                 ).join("\n") + "\n";
             }
 

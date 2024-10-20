@@ -57,8 +57,6 @@ Micro:bit BLE Uart messages:
     "countcross"
 
 ## TODO
-Add box in the table to type in name, saves name to csv
-
 Create pages for different activities (rn we just have dash)
 
 Race data validation and toggle logging
