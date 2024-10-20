@@ -57,7 +57,10 @@ Micro:bit BLE Uart messages:
     "countcross"
 
 ## TODO
+Add alert to remove row button
+
 Create pages for different activities (rn we just have dash)
+- Make the design more modular, like having a config file with some static data we can set that configures the pages automatically for us, since they should all be pretty similar (this might be a little complicated, but ideally we would have that, for now maybe just copying and pasting the files for different activities and modifying what's necessary probably works, but adds more overhead in the future)
 
 Race data validation and toggle logging
 
