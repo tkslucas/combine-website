@@ -59,13 +59,6 @@ Micro:bit BLE Uart messages:
 ## TODO
 Add box in the table to type in name, saves name to csv
 
-Add remove row button
-
-Add clear all button
-    Create an alert "Are you sure you want to remove all entries?"
-
-Improve UI (make it pretty, button to hide/show logs)
-
 Make the physical setup easier:
     Drill holes for ultrasonic sensor
     Mount the microbit inside the cones
