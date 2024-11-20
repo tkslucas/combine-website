@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pass Counter</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans p-0 m-0">
+    <div class="max-w-4xl mx-auto px-4 py-4">
+        <!-- Title -->
+        <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">Pass Counter Activity</h1>
+
+        <!-- Button to connect micro:bit -->
+        <div class="flex justify-center mb-6">
+            <button id="connect" class="bg-blue-500 text-white px-6 py-2 rounded-lg shadow hover:bg-blue-600 transition duration-200">
+                Connect to micro:bit
+            </button>
+            <button id="clearData" class="bg-red-500 text-white px-6 py-2 rounded-lg shadow hover:bg-red-600 transition duration-200 ml-4">
+                Clear Data
+            </button>
+        </div>
+
+        <!-- Pass Count Table -->
+        <div class="overflow-x-auto mb-6">
+            <table class="min-w-full table-auto bg-white rounded-lg overflow-hidden">
+                <thead class="bg-blue-500 text-white">
+                    <tr>
+                        <th class="py-3 px-6 text-left">Name</th>
+                        <th class="py-3 px-6 text-left">Device Name</th>
+                        <th class="py-3 px-6 text-left">Pass Count</th>
+                        <th class="py-3 px-6 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="microbitData" class="divide-y divide-gray-200">
+                    <!-- Rows will be appended here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Download CSV Button -->
+        <div class="flex justify-center mb-6">
+            <button id="download" class="bg-green-500 text-white px-6 py-2 rounded-lg shadow hover:bg-green-600 transition duration-200">
+                Download CSV
+            </button>
+        </div>
+
+        <!-- List of connected micro:bit devices -->
+        <div class="flex justify-center mb-6">
+            <div>
+                <h3 class="text-lg font-semibold mb-2">Connected micro:bit Devices:</h3>
+                <ul id="deviceList" class="list-disc pl-5">
+                    <!-- Device names will be appended here -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- UART Log -->
+        <h2 class="text-xl font-semibold text-gray-700 mb-3">UART Log</h2>
+        <div id="uartLog" class="bg-white shadow-md rounded-lg p-4 max-h-48 overflow-y-auto border border-gray-200" style="white-space: pre-wrap;">
+            <!-- UART messages will appear here -->
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/microbit-web-bluetooth@latest/dist/microbit.umd.js"></script>
+    <script>
+        let allData = []; // To store all data per device
+        let id = 0; // To store id of each data entry (makes it easier to delete rows)
+        const uartLogEl = document.getElementById("uartLog");
+        const deviceListEl = document.getElementById("deviceList");
+        const microbitDataEl = document.getElementById("microbitData");
+
+        // Function to log messages to the UART log section
+        const logUart = (message) => {
+            uartLogEl.innerHTML = `${message}\n${uartLogEl.innerHTML}`;
+        };
+
+        // Notifications for some actions        
+        // Reference to the table body for displaying data
+        const notify = (message) => {
+            const notification = document.createElement('div');
+            notification.className = "fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg opacity-0 transform translate-y-4 transition-all duration-300 ease-in-out"; // Tailwind classes
+            notification.textContent = message;
+            document.body.appendChild(notification);
+        
+            // Allow the element to be rendered before adding 'opacity-100' and 'translate-y-0'
+            setTimeout(() => {
+                notification.classList.remove('opacity-0', 'translate-y-4'); // Fade in and slide up
+                notification.classList.add('opacity-100', 'translate-y-0');
+            }, 10); // Small delay to ensure the notification is in the DOM
+        
+            // Remove the notification after a set duration
+            setTimeout(() => {
+                notification.classList.remove('opacity-100', 'translate-y-0'); // Fade out
+                notification.classList.add('opacity-0', 'translate-y-4'); // Slide down
+                // Remove the notification from the DOM after fade out
+                setTimeout(() => notification.remove(), 300); // Wait for fade out before removing
+            }, 3000); // Display for 3 seconds
+        };
+
+        // -------------------------------------
+        // Pass Count
+        // -------------------------------------
+        // Function to update the table with device name
+        function updateTable(data_id, deviceName, counter) {
+            const row = document.createElement("tr");
+            row.classList.add('transition', 'duration-200', 'hover:bg-slate-100'); // Add hover effect
+        
+            const nameCell = document.createElement("td"); // New name cell
+            const deviceCell = document.createElement("td");
+            const counterCell = document.createElement("td");
+            const actionCell = document.createElement("td");
+        
+            // Create an input field for the name
+            const nameInput = document.createElement("input");
+            nameInput.type = "text";
+            nameInput.className = "border rounded px-2 py-1 w-full"; // Tailwind classes for styling
+            nameInput.placeholder = "Enter name"; // Placeholder text
+        
+            // Event listener to update the all data array as the user types
+            nameInput.addEventListener("input", (event) => {
+                const nameValue = event.target.value;
+                // Update the name in the data structure
+                const dataEntry = allData[deviceName].raceData.find(raceDataElement => raceDataElement.data_id === data_id);
+                if (dataEntry) {
+                    dataEntry.name = nameValue; // Save the name to the data entry
+                }
+            });
+
+            
+            counterCell.setAttribute("id", data_id);
+        
+            // Fill in table cells with times and device name
+            deviceCell.textContent = deviceName;
+            counterCell.textContent = counter;
+        
+            // Add Tailwind classes for table cells
+            nameCell.classList.add('py-3', 'px-6');
+            deviceCell.classList.add('py-3', 'px-6');
+            counterCell.classList.add('py-3', 'px-6', 'font-black');
+            actionCell.classList.add('py-3', 'px-6');
+        
+            // Append the name input to the name cell
+            nameCell.appendChild(nameInput);
+            row.appendChild(nameCell);
+            row.appendChild(deviceCell);
+            row.appendChild(counterCell);
+        
+
+
+            // Create Increment Button
+            const incrementButton = document.createElement("button");
+            incrementButton.textContent = "+";
+            incrementButton.className = "bg-green-500 text-white px-2 py-1 shadow rounded-lg transition duration-200 hover:bg-green-600";
+            incrementButton.onclick = () => {
+                if (stopButton.textContent == "Stop") {
+                  allData[deviceName].counter++;
+                  counterCell.textContent = allData[deviceName].counter;
+                  updateExistingRow(deviceName, allData[deviceName].counter);
+                  logUart(`Counter manually incremented`);
+                }
+            };
+
+            // Create Decrement Button
+            const decrementButton = document.createElement("button");
+            decrementButton.textContent = "-";
+            decrementButton.className = "bg-yellow-500 text-white px-2 py-1 shadow rounded-lg transition duration-200 hover:bg-yellow-600 mx-1";
+            decrementButton.onclick = () => {
+                if (stopButton.textContent == "Stop") {
+                  if (allData[deviceName].counter > 0) {
+                      allData[deviceName].counter--;
+                      counterCell.textContent = allData[deviceName].counter;
+                      updateExistingRow(deviceName, allData[deviceName].counter);
+                      logUart(`Counter manually decremented`);
+                  }
+                }
+            };
+
+            // Create a button to remove the row
+            const removeButton = document.createElement("button");
+            removeButton.textContent = "Remove";
+            removeButton.className = "bg-red-500 text-white px-3 py-1 shadow rounded-lg transition duration-200 hover:bg-red-600";
+            removeButton.onclick = () => {
+                const confirmation = confirm(`Are you sure you want to delete this row (device: ${deviceName}, counter: ${counter})? This action cannot be undone.`);
+                if (confirmation) {
+                    const index = allData[deviceName].raceData.findIndex(raceDataElement =>
+                        raceDataElement.data_id == data_id
+                    );
+                    if (index > -1) {
+                        allData[deviceName].raceData.splice(index, 1);
+                        logUart(`Removed row for device: ${deviceName}, counter: ${counter}`);
+                        notify(`Removed row for device: ${deviceName}, counter: ${counter}`);
+                    }
+                    row.remove(); // Remove the row from the table
+                } else {
+                    logUart("Row not deleted.")
+                }
+            };
+        
+            // Stop Current Measurement Button
+            const stopButton = document.createElement("button");
+            stopButton.textContent = "Stop";
+            stopButton.className = "bg-orange-500 text-white px-3 py-1 shadow rounded-lg transition duration-200 hover:bg-orange-600 mx-1";
+
+            stopButton.onclick = () => {
+                if (stopButton.textContent == "Stop") {
+                  const confirmation = confirm(`Are you sure you want to stop this measurement (device: ${deviceName}, counter: ${counter})? This action cannot be undone.`);
+                  if (confirmation) {
+                      stopButton.textContent = "Stopped";
+                      stopButton.className = "bg-gray-500 text-white px-3 py-1 shadow rounded-lg transition duration-200 mx-1";
+                      incrementButton.className = "bg-gray-500 text-white px-2 py-1 shadow rounded-lg transition duration-200";
+                      decrementButton.className = "bg-gray-500 text-white px-2 py-1 shadow rounded-lg transition duration-200 mx-1";
+                      const index = allData[deviceName].raceData.findIndex(raceDataElement =>
+                          raceDataElement.data_id == data_id
+                      );
+                      if (index > -1) {
+                          allData[deviceName].counter = 0;
+                          allData[deviceName].running = 0;
+                          logUart(`Stopped measurement for device: ${deviceName}, counter: ${counter}`);
+                      }
+                  } else {
+                      logUart("Measurement not stopped.")
+                  }
+                }
+            };
+
+            actionCell.appendChild(incrementButton);
+            actionCell.appendChild(decrementButton);
+            actionCell.appendChild(stopButton);
+            actionCell.appendChild(removeButton); // Append the remove button to action cell
+            row.appendChild(actionCell); // Append action cell to the row
+        
+            microbitDataEl.appendChild(row); // Append to table
+        }
+        
+        // -------------------------------------
+        // Pass Count
+        // -------------------------------------
+        // Function to update row when message is received
+        function updateExistingRow(deviceName, counter) {
+            let current_id = allData[deviceName].current_id;
+            const counterCell = document.getElementById(current_id);
+            counterCell.textContent = counter;
+          
+            const index = allData[deviceName].raceData.findIndex(raceDataElement =>
+                raceDataElement.data_id == current_id
+            );
+            if (index > -1) {
+               allData[deviceName].raceData[index].counter = counter;
+            }
+        }
+
+        // -------------------------------------
+        // Pass Count
+        // -------------------------------------
+        // Function to handle messages for a specific device
+        function handleData(deviceName, data) {
+            if (!allData[deviceName]) {
+                allData[deviceName] = { counter: 0, running: 0, current_id: -1, raceData: [] };
+            }
+
+            const deviceData = allData[deviceName];
+
+            if (data === "countcross") {
+                // Record the passes
+                oldCounter = deviceData.counter;
+                deviceData.counter++;
+                logUart(`[${deviceName}] countcross increased: ${oldCounter} -> ${deviceData.counter}`);
+                if (deviceData.running == 0) {
+                  // Add to data array and update table
+                  deviceData.raceData.push({ data_id: id, counter: deviceData.counter });
+                  console.log(allData);
+                  updateTable(id, deviceName, deviceData.counter);
+                  deviceData.running = 1;
+                  deviceData.current_id = id;
+                  // Increment id because we added row
+                  id++;
+                }
+                else {
+                  updateExistingRow(deviceName, deviceData.counter);
+                }
+            }
+        }
+
+        // Clear Data button functionality
+        document.getElementById("clearData").onclick = () => {
+            const confirmation = confirm("Are you sure you want to clear all data? This action cannot be undone.");
+            if (confirmation) {
+                allData = {}; // Clear all data
+                microbitDataEl.innerHTML = ''; // Clear table
+                logUart("All data cleared.");
+                notify("All data cleared.");
+            } else {
+                logUart("Data not cleared.")
+            }
+        };
+
+        // Function to update the list of connected micro:bit devices
+        function updateDeviceList(deviceName) {
+            const listItem = document.createElement("li");
+            listItem.textContent = deviceName;
+            deviceListEl.appendChild(listItem);
+        }
+
+        // Connect to the micro:bit
+        document.getElementById("connect").onclick = async () => {
+            try {
+                const device = await microbit.requestMicrobit(window.navigator.bluetooth);
+                if (device) {
+                    const filteredName = device.name.match(/\[(.*?)\]/)?.[1] || device.name;
+                    logUart(`Connected to: ${filteredName}`);
+                    notify(`Connected to: ${filteredName}`);
+                    updateDeviceList(filteredName); // Add the device name to the list
+
+                    const services = await microbit.getServices(device);
+
+                    if (services.uartService) {
+                        logUart(`[${filteredName}] UART service connected`);
+
+                        // Listen for UART messages
+                        services.uartService.addEventListener("receiveText", (event) => {
+                            const data = event.detail.trim();
+                            logUart(`[${filteredName}] Received: ${data}`);
+
+                            // Handle data for this device
+                            handleData(filteredName, data);
+                        });
+
+                        //await services.uartService.sendText("connected\n"); // Send uart message to microbit
+                    } else {
+                        logUart(`[${filteredName}] UART service not available`);
+                    }
+                }
+            } catch (error) {
+                logUart(`Error: ${error.message}`);
+            }
+        };
+
+        // Download CSV file with all data, including device name
+        document.getElementById("download").onclick = () => {
+            let csvContent = "Name,Device,PassCounter\n";
+
+            // Loop over each device's data
+            for (const deviceName in allData) {
+                const deviceData = allData[deviceName];
+                csvContent += deviceData.raceData.map(dataEntry =>
+                  `${dataEntry.name},${deviceName},${dataEntry.counter}`
+                ).join("\n") + "\n";
+            }
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', 'combine_data.csv');
+            a.click();
+
+            notify("CSV Data Downloaded!")
+        };
+    </script>
+</body>
+</html>
