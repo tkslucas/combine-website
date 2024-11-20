@@ -20,6 +20,11 @@
             <button id="clearData" class="bg-red-500 text-white px-6 py-2 rounded-lg shadow hover:bg-red-600 transition duration-200 ml-4">
                 Clear Data
             </button>
+            <!-- Toggle Checkbox for Data Handling -->
+            <label class="flex items-center ml-4">
+                <input type="checkbox" id="dataToggle" class="form-checkbox h-5 w-5 text-blue-600 transition duration-150 ease-in-out">
+                <span class="ml-2 text-gray-700">Enable Data Handling</span>
+            </label>
         </div>
 
         <!-- Pass Count Table -->
@@ -259,6 +264,14 @@
         // -------------------------------------
         // Function to handle messages for a specific device
         function handleData(deviceName, data) {
+            // Check if data handling is enabled
+            const dataToggle = document.getElementById("dataToggle").checked;
+
+            if (!dataToggle) {
+                logUart(`Data handling is disabled. Ignoring data: ${data}`);
+                return; // Exit if the checkbox is unchecked
+            }  
+
             if (!allData[deviceName]) {
                 allData[deviceName] = { counter: 0, running: 0, current_id: -1, raceData: [] };
             }
